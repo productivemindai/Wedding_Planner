@@ -884,6 +884,11 @@ const DEFAULT_STATE = {
     destination: '', dates: '', budget: '', notes: '',
     checklist: [] // {id,title,done}
   },
+  invitations: {
+    template: 'classic', // 'classic' | 'modern' | 'elegant'
+    couple: '', date: '', time: '', location: '',
+    url: '', rvspByDate: '', details: ''
+  },
   inspo: [], // {id,src,caption}
   photos: [], // {id, src, caption, album, date}
   journal: {
@@ -912,13 +917,13 @@ const TIERS = {
   standard: {
     id: 'standard', name: 'Standard', price: 19, inAppPrice: 39,
     tagline: 'Lite, plus the wedding-day and after.',
-    sections: ['dashboard','vision','tasks','vendors','budget','timeline','guests','dayof','gifts','honeymoon','inspo','photos','notes'],
+    sections: ['dashboard','vision','tasks','vendors','budget','timeline','guests','dayof','gifts','honeymoon','invitations','inspo','photos','notes'],
     palettes: ['editorial'],
   },
   premium: {
     id: 'premium', name: 'Premium', price: 29, inAppPrice: 59,
     tagline: 'Every section. Every palette. The full studio.',
-    sections: ['dashboard','vision','tasks','vendors','budget','timeline','guests','dayof','gifts','honeymoon','inspo','photos','journal','notes'],
+    sections: ['dashboard','vision','tasks','vendors','budget','timeline','guests','dayof','gifts','honeymoon','invitations','inspo','photos','journal','notes'],
     palettes: ['editorial','blush','navy','terra'],
   },
 };
@@ -1087,8 +1092,9 @@ const NAV = [
   { id: 'guests',    label: 'Guests',    group: 'People' },
   { id: 'dayof',     label: 'Day-Of',    group: 'People' },
   { id: 'gifts',     label: 'Gifts',     group: 'People' },
-  { id: 'honeymoon', label: 'Honeymoon', group: 'After' },
-  { id: 'inspo',     label: 'Inspiration', group: 'Keepsakes' },
+  { id: 'honeymoon',   label: 'Honeymoon',   group: 'After' },
+  { id: 'invitations', label: 'Invitations', group: 'Communicate' },
+  { id: 'inspo',       label: 'Inspiration', group: 'Keepsakes' },
   { id: 'photos',    label: 'Photos',      group: 'Keepsakes' },
   { id: 'journal',   label: 'Journal',     group: 'Keepsakes' },
   { id: 'notes',     label: 'Notes',     group: 'Keepsakes' },
@@ -2183,6 +2189,234 @@ Routes.honeymoon = function () {
     'Keep itinerary details, packing lists, and prep tasks beside your wedding plans.'),
     h('div', { class: 'grid-2' }, infoPanel, checklistPanel)];
 };
+</script>
+
+<script>
+/* ============================================================
+   ROUTE: INVITATIONS
+   ============================================================ */
+Routes.invitations = function () {
+  if (!hasSection('invitations')) {
+    return h('div', { class: 'card-lock' },
+      h('div', { class: 'lock-icon' }, '🔒'),
+      h('div', { class: 'lock-title' }, 'Invitations'),
+      h('p', {}, 'Create custom wedding invitations. Upgrade to Standard to unlock.'),
+      h('button', { class: 'btn', onClick: () => navigate('pricing') }, 'See Plans')
+    );
+  }
+
+  const inv = State.invitations;
+
+  // Template styles
+  const templates = [
+    { id: 'classic', name: 'Classic', desc: 'Timeless elegance' },
+    { id: 'modern', name: 'Modern', desc: 'Clean & contemporary' },
+    { id: 'elegant', name: 'Elegant', desc: 'Ornate luxury' }
+  ];
+
+  const editorPanel = h('div', { class: 'panel' },
+    h('h3', {}, 'Invitation details'),
+    formGrid([
+      { span: 12, label: 'Template', value: inv.template,
+        type: 'select', options: templates.map(t => ({ value: t.id, label: t.name + ' — ' + t.desc })),
+        on: (v) => { inv.template = v; saveState(); render(); } },
+      { span: 6, label: 'Couple names', value: inv.couple, placeholder: 'Sarah & James',
+        on: (v) => { inv.couple = v; saveState(); } },
+      { span: 6, label: 'Wedding date', value: inv.date, placeholder: 'Saturday, June 15, 2024',
+        on: (v) => { inv.date = v; saveState(); } },
+      { span: 6, label: 'Time', value: inv.time, placeholder: '4:00 PM',
+        on: (v) => { inv.time = v; saveState(); } },
+      { span: 6, label: 'Location', value: inv.location, placeholder: 'The Grand Ballroom, NYC',
+        on: (v) => { inv.location = v; saveState(); } },
+      { span: 12, label: 'RSVP by date', value: inv.rvspByDate, placeholder: 'June 1, 2024',
+        on: (v) => { inv.rvspByDate = v; saveState(); } },
+      { span: 12, label: 'RSVP URL / contact', value: inv.url, placeholder: 'https://... or email: rsvp@example.com',
+        on: (v) => { inv.url = v; saveState(); } },
+      { span: 12, type: 'textarea', label: 'Additional details', value: inv.details,
+        placeholder: 'Dress code, reception details, dietary restrictions, directions…',
+        on: (v) => { inv.details = v; saveState(); } },
+    ]),
+    h('div', { style: { marginTop: '18px', display: 'flex', gap: '10px' } },
+      h('button', { class: 'btn', onClick: () => printInvitation(inv) }, '🖨 Print'),
+      h('button', { class: 'btn btn-outline', onClick: () => downloadInvitationHTML(inv) }, '⬇ Download HTML')
+    )
+  );
+
+  const previewPanel = h('div', { class: 'panel', style: { background: inv.template === 'elegant' ? '#faf6f1' : inv.template === 'modern' ? '#fafafa' : '#fbf7ef' } },
+    renderInvitationPreview(inv)
+  );
+
+  return [
+    sectionTitle('Invitations', 'Send personalized digital invites',
+      'Design a custom invitation that matches your style. Share digitally or print.'),
+    h('div', { class: 'grid-2' }, editorPanel, previewPanel)
+  ];
+};
+
+function renderInvitationPreview(inv) {
+  if (!inv.date || !inv.couple) {
+    return h('div', { style: { textAlign: 'center', padding: '60px 40px', color: '#8a7760' } },
+      h('div', { style: { fontSize: '3.5rem', marginBottom: '12px' } }, '💌'),
+      h('div', { style: { fontSize: '1.05rem', fontStyle: 'italic' } }, 'Fill in details to preview'));
+  }
+
+  const isClassic = inv.template === 'classic';
+  const isModern = inv.template === 'modern';
+  const isElegant = inv.template === 'elegant';
+
+  const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+  const text = getComputedStyle(document.documentElement).getPropertyValue('--text').trim();
+
+  const content = h('div', {
+    style: {
+      padding: '48px 40px',
+      textAlign: 'center',
+      fontFamily: 'var(--serif)',
+      color: text
+    }
+  });
+
+  if (isElegant) {
+    content.append(
+      h('div', { style: { fontSize: '1.5rem', marginBottom: '20px', letterSpacing: '0.15em', textTransform: 'uppercase', color: accent } }, '◆'),
+      h('div', { style: { fontSize: '2.2rem', fontWeight: '600', marginBottom: '8px', lineHeight: '1.2' } }, inv.couple),
+      h('div', { style: { fontSize: '1rem', fontStyle: 'italic', marginBottom: '28px', color: '#8a7760' } }, 'request the honour of your presence'),
+      h('div', { style: { fontSize: '2.8rem', fontWeight: '300', marginTop: '24px', marginBottom: '24px', lineHeight: '1.3', color: accent } }, 'at the celebration of their marriage'),
+      h('div', { style: { fontSize: '1.15rem', marginTop: '28px', marginBottom: '8px' } }, inv.date),
+      inv.time ? h('div', { style: { fontSize: '1rem' } }, inv.time) : null,
+      inv.location ? h('div', { style: { fontSize: '1rem', marginTop: '12px' } }, inv.location) : null,
+      h('div', { style: { fontSize: '1.5rem', margin: '28px 0', color: accent } }, '◆'),
+      inv.rvspByDate ? h('div', { style: { fontSize: '0.9rem', marginTop: '16px' } }, 'RSVP by ' + inv.rvspByDate) : null,
+      inv.url ? h('div', { style: { fontSize: '0.9rem', marginTop: '8px', color: accent, textDecoration: 'underline' } }, inv.url) : null
+    );
+  } else if (isModern) {
+    content.append(
+      h('div', { style: { fontSize: '2.4rem', fontWeight: '600', marginBottom: '6px', letterSpacing: '-0.02em' } }, inv.couple),
+      h('div', { style: { fontSize: '0.95rem', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '24px', color: '#8a7760' } }, 'are getting married'),
+      h('div', { style: { fontSize: '1.4rem', fontWeight: '300', margin: '20px 0' } }, inv.date),
+      inv.time ? h('div', { style: { fontSize: '1rem', color: '#8a7760' } }, 'at ' + inv.time) : null,
+      inv.location ? h('div', { style: { fontSize: '1rem', color: '#8a7760', marginTop: '8px' } }, inv.location) : null,
+      h('div', { style: { height: '1px', background: accent, margin: '24px 0', width: '40%', marginLeft: 'auto', marginRight: 'auto' } }),
+      inv.rvspByDate ? h('div', { style: { fontSize: '0.85rem', marginTop: '16px', textTransform: 'uppercase', letterSpacing: '0.05em' } }, 'Reply by ' + inv.rvspByDate) : null,
+      inv.url ? h('div', { style: { fontSize: '0.9rem', marginTop: '8px', color: accent } }, inv.url) : null
+    );
+  } else {
+    // classic
+    content.append(
+      h('div', { style: { fontSize: '1.8rem', marginBottom: '12px' } }, '✨'),
+      h('div', { style: { fontSize: '2.2rem', fontWeight: '600', marginBottom: '20px', lineHeight: '1.2' } }, inv.couple),
+      h('div', { style: { fontSize: '1rem', marginBottom: '24px', color: '#8a7760' } }, 'together with their families\nrequest the pleasure of your company'),
+      h('div', { style: { fontSize: '1.3rem', fontWeight: '500', marginTop: '24px', marginBottom: '12px' } }, inv.date),
+      inv.time ? h('div', { style: { fontSize: '1rem' } }, inv.time) : null,
+      inv.location ? h('div', { style: { fontSize: '1rem', marginTop: '12px', color: '#8a7760' } }, inv.location) : null,
+      h('div', { style: { height: '1px', background: accent, margin: '24px auto', width: '30%' } }),
+      inv.rvspByDate ? h('div', { style: { fontSize: '0.9rem', marginTop: '16px' } }, 'RSVP by ' + inv.rvspByDate) : null,
+      inv.url ? h('div', { style: { fontSize: '0.9rem', marginTop: '8px', color: accent } }, inv.url) : null
+    );
+  }
+
+  return content;
+}
+
+function printInvitation(inv) {
+  const win = window.open('', 'invitation');
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Invitation</title>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; padding: 40px; font-family: 'Source Serif 4', Georgia, serif; background: #faf5ec; }
+  .invite { max-width: 600px; margin: 0 auto; background: white; padding: 60px 40px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+  h1 { font-size: 2.2rem; font-weight: 600; margin: 0 0 20px; text-align: center; }
+  .subtitle { text-align: center; color: #8a7760; margin-bottom: 24px; }
+  .details { text-align: center; margin: 24px 0; }
+  .divider { height: 1px; background: #C9A875; margin: 24px 0; width: 50%; margin-left: auto; margin-right: auto; }
+  .rsvp { text-align: center; margin-top: 24px; font-size: 0.95rem; }
+  @media print { body { background: white; } .invite { box-shadow: none; } }
+</style>
+</head>
+<body>
+<div class="invite">
+  <h1>${inv.couple || 'Names'}</h1>
+  <div class="subtitle">request the pleasure of your company</div>
+  <div class="details">
+    <div style="font-size: 1.3rem; font-weight: 500; margin: 20px 0;">${inv.date || 'Date'}</div>
+    ${inv.time ? '<div>' + inv.time + '</div>' : ''}
+    ${inv.location ? '<div style="color: #8a7760; margin-top: 12px;">' + inv.location + '</div>' : ''}
+  </div>
+  <div class="divider"></div>
+  ${inv.rvspByDate ? '<div class="rsvp">RSVP by ' + inv.rvspByDate + '</div>' : ''}
+  ${inv.url ? '<div class="rsvp">' + inv.url + '</div>' : ''}
+  ${inv.details ? '<div style="text-align: center; margin-top: 24px; font-size: 0.95rem; color: #8a7760; white-space: pre-line;">' + inv.details + '</div>' : ''}
+</div>
+</body>
+</html>`;
+  win.document.write(html);
+  win.document.close();
+  setTimeout(() => win.print(), 250);
+}
+
+function downloadInvitationHTML(inv) {
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${inv.couple || 'Wedding Invitation'}</title>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Source Serif 4', Georgia, serif; background: linear-gradient(135deg, #faf5ec 0%, #f0e8d6 100%); padding: 20px; }
+  .invite { max-width: 700px; margin: 0 auto; background: white; padding: 60px 40px; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+  h1 { font-size: 2.4rem; font-weight: 600; margin: 0 0 16px; text-align: center; color: #5c4230; line-height: 1.2; }
+  .subtitle { text-align: center; color: #8a7760; margin-bottom: 24px; font-size: 1.05rem; }
+  .details { text-align: center; margin: 28px 0; }
+  .date { font-size: 1.5rem; font-weight: 500; margin: 20px 0; color: #3d2e24; }
+  .time, .location { font-size: 1.1rem; color: #8a7760; margin-top: 8px; }
+  .divider { height: 1px; background: #C9A875; margin: 28px auto; width: 50%; }
+  .rsvp-section { text-align: center; margin-top: 24px; }
+  .rsvp-label { font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; color: #8a7760; margin-bottom: 8px; }
+  .rsvp-text { font-size: 1rem; color: #C9A875; }
+  .details-text { margin-top: 24px; text-align: center; font-size: 0.95rem; color: #8a7760; white-space: pre-line; line-height: 1.6; }
+  @media print {
+    body { background: white; padding: 0; }
+    .invite { box-shadow: none; margin: 0; padding: 60px 40px; }
+  }
+</style>
+</head>
+<body>
+<div class="invite">
+  <h1>${inv.couple || 'Wedding Celebration'}</h1>
+  <div class="subtitle">request the pleasure of your company</div>
+  <div class="details">
+    <div class="date">${inv.date || 'Wedding Date'}</div>
+    ${inv.time ? '<div class="time">' + inv.time + '</div>' : ''}
+    ${inv.location ? '<div class="location">' + inv.location + '</div>' : ''}
+  </div>
+  <div class="divider"></div>
+  <div class="rsvp-section">
+    ${inv.rvspByDate ? '<div class="rsvp-label">RSVP by ' + inv.rvspByDate + '</div>' : ''}
+    ${inv.url ? '<div class="rsvp-text">' + inv.url + '</div>' : ''}
+  </div>
+  ${inv.details ? '<div class="details-text">' + inv.details + '</div>' : ''}
+</div>
+</body>
+</html>`;
+
+  const blob = new Blob([html], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (inv.couple || 'invitation').replace(/\s+/g, '_') + '.html';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('Invitation downloaded');
+}
 </script>
 
 <script>
