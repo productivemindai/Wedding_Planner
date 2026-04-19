@@ -917,7 +917,7 @@ const TIERS = {
   standard: {
     id: 'standard', name: 'Standard', price: 19, inAppPrice: 39,
     tagline: 'Lite, plus the wedding-day and after.',
-    sections: ['dashboard','vision','tasks','vendors','budget','timeline','guests','dayof','gifts','honeymoon','invitations','inspo','photos','notes'],
+    sections: ['dashboard','vision','tasks','vendors','budget','timeline','guests','dayof','gifts','honeymoon','inspo','photos','notes'],
     palettes: ['editorial'],
   },
   premium: {
@@ -2200,7 +2200,7 @@ Routes.invitations = function () {
     return h('div', { class: 'card-lock' },
       h('div', { class: 'lock-icon' }, '🔒'),
       h('div', { class: 'lock-title' }, 'Invitations'),
-      h('p', {}, 'Create custom wedding invitations. Upgrade to Standard to unlock.'),
+      h('p', {}, 'Create custom wedding invitations. Upgrade to Premium to unlock.'),
       h('button', { class: 'btn', onClick: () => navigate('pricing') }, 'See Plans')
     );
   }
