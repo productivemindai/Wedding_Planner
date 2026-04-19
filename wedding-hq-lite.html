@@ -2899,13 +2899,17 @@ Routes.pricing = function () {
     if (isCurrent) {
       btn = h('button', { class: 'ghost-btn', disabled: true,
         style: { marginTop: 'auto', cursor: 'default', opacity: '.55' } }, '✓ You own this');
+    } else if (!isUpgrade) {
+      /* lower tier — already included in their plan */
+      btn = h('button', { class: 'ghost-btn', disabled: true,
+        style: { marginTop: 'auto', cursor: 'default', opacity: '.55' } }, '✓ Included in your plan');
     } else if (PRODUCT_TIER) {
-      /* locked file — link out to Etsy */
+      /* locked file — link out to Etsy for upgrades only */
       btn = h('a', {
         href: ETSY_URLS[tier.id] || '#', target: '_blank', rel: 'noopener noreferrer',
-        class: isUpgrade ? 'action-btn' : 'ghost-btn',
+        class: 'action-btn',
         style: { marginTop: 'auto', textDecoration: 'none', textAlign: 'center' }
-      }, isUpgrade ? 'Buy on Etsy \u2197' : 'Buy on Etsy \u2197');
+      }, 'Buy on Etsy \u2197');
     } else {
       /* demo mode — in-app switch */
       btn = h('button', { class: isUpgrade ? 'action-btn' : 'ghost-btn',
